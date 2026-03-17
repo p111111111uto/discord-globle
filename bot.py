@@ -37,6 +37,8 @@ async def guess(interaction: discord.Interaction, usr_country: str):
 
     distance = game.haversine(float(guessed['latitude']), float(guessed['longitude']), float(target['latitude']), float(target['longitude']))
 
+    direction = game.directional_arrows(float(guessed['latitude']), float(guessed['longitude']), float(target['latitude']), float(target['longitude']))
+
     if distance < 1:
         await interaction.response.send_message(f'Correct! Country was {usr_country}', ephemeral=True)
         await interaction.followup.send(f'{interaction.user.name} has won!')
@@ -45,7 +47,7 @@ async def guess(interaction: discord.Interaction, usr_country: str):
     
     proximity = game.proximity_percent(distance)
 
-    await interaction.response.send_message(f'{usr_country} is {distance} miles away. Proximity: {proximity}%', ephemeral=True)
+    await interaction.response.send_message(f'{usr_country} is {distance} miles away {direction}. Proximity: {proximity}%', ephemeral=True)
 
 @bot.tree.command(name='giveup', description='Give up guessing today\'s country', guild=discord.Object(id=int(GUILD_ID)))
 async def giveup(interaction: discord.Interaction):

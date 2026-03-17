@@ -53,3 +53,28 @@ def proximity_percent(distance):
     # Proximity formula
     proximity = max(0, (100 - (distance / MAX_DIST * 100)))
     return int(proximity)
+
+# Arrows pointing to the direction of the country
+def directional_arrows(lat1, lon1, lat2, lon2):
+    dlon = lon2 - lon1
+    x = math.sin(math.radians(dlon)) * math.cos(math.radians(lat2))
+    y = math.cos(math.radians(lat1)) * math.sin(math.radians(lat2)) - math.sin(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.cos(math.radians(dlon))
+    bearing = math.degrees(math.atan2(x, y))
+    bearing = (bearing + 360) % 360
+
+    if bearing >= 0 and bearing <= 22.5 or bearing > 337.5 and bearing <= 360:
+        return '⬆️'
+    elif bearing > 22.5 and bearing <= 67.5:
+        return '↗️'
+    elif bearing > 67.5 and bearing <= 112.5:
+        return '➡️'
+    elif bearing > 112.5 and bearing <= 157.5:
+        return '↘️'
+    elif bearing > 157.5 and bearing <= 202.5:
+        return '⬇️'
+    elif bearing > 202.5 and bearing <= 247.5:
+        return '↙️'
+    elif bearing > 247.5 and bearing <= 292.5:
+        return '⬅️'
+    else:
+        return '↖️'
