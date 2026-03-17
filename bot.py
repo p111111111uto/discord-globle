@@ -1,13 +1,8 @@
 import discord
 from discord.ext import commands
-import logging
-import os
-from dotenv import load_dotenv
+import game
+countries_list = game.load_countries()
 
-load_dotenv()
-DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
-
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
@@ -25,8 +20,28 @@ async def on_message(message):
     
     await bot.process_commands(message)
 
+user_state = {}
 @bot.command()
 async def guess(ctx, *, usr_country):
-    await ctx.send('Message received')
+    user_id = ctx.author.id
+    if user_state.get(user_id, {}).get('won'):
+        await ctx.send('You\'ve already won today!')
+        return
 
-bot.run(DISCORD_TOKEN, log_handler=handler, log_level=logging.DEBUG)
+    guessed = game.find_country(usr_country, countries_list)
+
+    if guessed is None:
+        await ctx.send('Country not found')
+        return
+    target = game.daily_country(countries_list)
+
+    distance = game.haversine(float(guessed['latitude']), float(guessed['longitude']), float(target['latitude']), float(target['longitude']))
+
+    if distance < 1:
+        await ctx.send(f'Correct! Country was {usr_country}')
+        user_state[user_id] = {'won': True}
+        return
+    
+    proximity = game.proximity_percent(distance)
+
+    await ctx.send(f'{usr_country} is {distance} miles away. Proximity: {proximity}%')
