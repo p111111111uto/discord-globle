@@ -1,5 +1,9 @@
 import discord
 from discord.ext import commands
+import os
+from dotenv import load_dotenv
+load_dotenv()
+GUILD_ID = os.getenv('GUILD_ID')
 import game
 countries_list = game.load_countries()
 
@@ -11,37 +15,45 @@ bot = commands.Bot(command_prefix='/', intents=intents)
 
 @bot.event
 async def on_ready():
+    await bot.tree.sync()
+    guild = discord.Object(id=GUILD_ID)
+    await bot.tree.sync(guild=guild)
     print(f'Bot is ready.')
 
-@bot.event
-async def on_message(message):
-    if message.author == bot.user:
-        return
-    
-    await bot.process_commands(message)
-
 user_state = {}
-@bot.command()
-async def guess(ctx, *, usr_country):
-    user_id = ctx.author.id
+@bot.tree.command(name='guess', description='Guess today\'s country', guild=discord.Object(id=int(GUILD_ID)))
+async def guess(interaction: discord.Interaction, usr_country: str):
+    user_id = interaction.user.id
     if user_state.get(user_id, {}).get('won'):
-        await ctx.send('You\'ve already won today!')
+        await interaction.response.send_message('You\'ve already guessed today!', ephemeral=True)
         return
 
     guessed = game.find_country(usr_country, countries_list)
 
     if guessed is None:
-        await ctx.send('Country not found')
+        await interaction.response.send_message('Country not found', ephemeral=True)
         return
     target = game.daily_country(countries_list)
 
     distance = game.haversine(float(guessed['latitude']), float(guessed['longitude']), float(target['latitude']), float(target['longitude']))
 
     if distance < 1:
-        await ctx.send(f'Correct! Country was {usr_country}')
+        await interaction.response.send_message(f'Correct! Country was {usr_country}', ephemeral=True)
+        await interaction.followup.send(f'{interaction.user.name} has won!')
         user_state[user_id] = {'won': True}
         return
     
     proximity = game.proximity_percent(distance)
 
-    await ctx.send(f'{usr_country} is {distance} miles away. Proximity: {proximity}%')
+    await interaction.response.send_message(f'{usr_country} is {distance} miles away. Proximity: {proximity}%', ephemeral=True)
+
+@bot.tree.command(name='giveup', description='Give up guessing today\'s country', guild=discord.Object(id=int(GUILD_ID)))
+async def giveup(interaction: discord.Interaction):
+    user_id = interaction.user.id
+    if user_state.get(user_id, {}).get('won'):
+        await interaction.response.send_message('You\'ve already guessed today!', ephemeral=True)
+        return
+    todays_country = game.daily_country(countries_list)
+    await interaction.response.send_message(f"Country is {todays_country['COUNTRY']}", ephemeral=True)
+    user_state[user_id] = {'won': True} # prevent user from guessing again
+    return
