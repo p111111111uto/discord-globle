@@ -11,7 +11,7 @@ DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
 
 async def run():
     db = await database.create_pool()
-    await database.create_pool(db)
+    await database.tables(db)
     bot.bot.db = db
 
     handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
