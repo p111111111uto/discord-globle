@@ -1,5 +1,6 @@
 import csv
 import datetime
+datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d")
 import random
 import math
 

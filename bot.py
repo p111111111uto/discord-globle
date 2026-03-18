@@ -51,15 +51,15 @@ async def guess(interaction: discord.Interaction, usr_country: str):
     # Proximity based on distance between countries
     proximity = game.proximity_percent(distance)
 
-    # Response message with relevent info for user's next guess
-    await interaction.response.send_message(f'{usr_country} is {distance} miles away {direction}. Proximity: {proximity}%', ephemeral=True)
-
     # Win condition
     if distance < 1:
         await interaction.response.send_message(f'Correct! Country was {usr_country}', ephemeral=True)
         await interaction.followup.send(f'{interaction.user.name} has won!') # Let everyone know user won
         user_state[user_id] = {'won': True}
         return
+    
+    # Response message with relevent info for user's next guess
+    await interaction.response.send_message(f'{usr_country} is {distance} miles away {direction}. Proximity: {proximity}%', ephemeral=True)
 
 
 # Giveup command handler
