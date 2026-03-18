@@ -14,7 +14,6 @@ async def run():
     await database.create_tables(db)
     bot.bot.db = db
 
-    handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-    await bot.bot.start(DISCORD_TOKEN, log_handler=handler, log_level=logging.DEBUG)
+    await bot.bot.start(DISCORD_TOKEN)
 
 asyncio.run(run())
