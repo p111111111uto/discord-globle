@@ -12,6 +12,7 @@ intents.message_content = True
 intents.members = True
 
 bot = commands.Bot(command_prefix='/', intents=intents)
+bot.db = None
 
 @bot.event
 async def on_ready():
