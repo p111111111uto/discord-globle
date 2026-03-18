@@ -4,8 +4,10 @@ from dotenv import load_dotenv
 load_dotenv()
 DATABASE_URL = os.getenv('DATABASE_URL')
 
-async def run():
-    db = await asyncpg.create_pool(os.getenv('DATABASE_URL'))
+async def create_pool():
+    return await asyncpg.create_pool(os.getenv('DATABASE_URL'))
+
+async def create_tables(db):
 
     await db.execute("""
         CREATE TABLE IF NOT EXISTS players(
