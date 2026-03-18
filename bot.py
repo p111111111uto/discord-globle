@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import os
+import datetime
 from dotenv import load_dotenv
 load_dotenv()
 GUILD_ID = os.getenv('GUILD_ID')
@@ -21,16 +22,22 @@ async def on_ready():
     await bot.tree.sync(guild=guild)
     print(f'Bot is ready.')
 
-user_state = {}
 # Guess command handler
 @bot.tree.command(name='guess', description='Guess today\'s country', guild=discord.Object(id=int(GUILD_ID)))
 async def guess(interaction: discord.Interaction, usr_country: str):
     user_id = interaction.user.id
 
     # If user has won, they can't play again
-    if user_state.get(user_id, {}).get('won'):
+    row = await bot.db.fetchrow('SELECT last_played FROM players WHERE user_id = $1', user_id)
+    if row and row['last_played'] == datetime.date.today():
         await interaction.response.send_message('You\'ve already guessed today!', ephemeral=True)
         return
+    
+    await bot.db.execute("""
+        INSERT INTO players (user_id, total_guesses)
+        VALUES ($1, 1)
+        ON CONFLICT DO (user_id) DO UPDATE SET total_guesses = players.total_guesses + 1
+    """, user_id)
 
     # User's guess
     guessed = game.find_country(usr_country, countries_list)
@@ -56,7 +63,11 @@ async def guess(interaction: discord.Interaction, usr_country: str):
     if distance < 1:
         await interaction.response.send_message(f'Correct! Country was {usr_country}', ephemeral=True)
         await interaction.followup.send(f'{interaction.user.name} has won!') # Let everyone know user won
-        user_state[user_id] = {'won': True}
+        await bot.db.execute("""
+                INSERT INTO players (user_id, last_played)
+                VALUES ($1, $2)
+                ON CONFLICT (user_id) DO UPDATE SET last_played = $2
+                """, user_id, datetime.date.today())
         return
     
     # Response message with relevent info for user's next guess
@@ -67,10 +78,15 @@ async def guess(interaction: discord.Interaction, usr_country: str):
 @bot.tree.command(name='giveup', description='Give up guessing today\'s country', guild=discord.Object(id=int(GUILD_ID)))
 async def giveup(interaction: discord.Interaction):
     user_id = interaction.user.id
-    if user_state.get(user_id, {}).get('won'):
+    row = await bot.db.fetchrow('SELECT last_played FROM players WHERE user_id = $1', user_id)
+    if row and row['last_played'] == datetime.date.today():
         await interaction.response.send_message('You\'ve already guessed today!', ephemeral=True)
         return
     todays_country = game.daily_country(countries_list)
     await interaction.response.send_message(f"Country is {todays_country['COUNTRY']}", ephemeral=True)
-    user_state[user_id] = {'won': True} # prevent user from guessing again
+    await bot.db.execute("""
+            INSERT INTO players (user_id, last_played)
+            VALUES ($1, $2)
+            ON CONFLICT (user_id) DO UPDATE SET last_played = $2
+            """, user_id, datetime.date.today()) # prevent user from guessing again
     return
