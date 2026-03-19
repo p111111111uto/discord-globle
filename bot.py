@@ -34,10 +34,10 @@ async def guess(interaction: discord.Interaction, usr_country: str):
         return
     
     await bot.db.execute("""
-        INSERT INTO players (user_id, total_guesses)
-        VALUES ($1, 1)
-        ON CONFLICT DO (user_id) DO UPDATE SET total_guesses = players.total_guesses + 1
-    """, user_id)
+        INSERT INTO players (user_id, total_guesses, username)
+        VALUES ($1, 1, $2)
+        ON CONFLICT (user_id) DO UPDATE SET total_guesses = players.total_guesses + 1, username = $2
+    """, user_id, interaction.user.name)
 
     # User's guess
     guessed = game.find_country(usr_country, countries_list)
@@ -64,10 +64,10 @@ async def guess(interaction: discord.Interaction, usr_country: str):
         await interaction.response.send_message(f'Correct! Country was {usr_country}', ephemeral=True)
         await interaction.followup.send(f'{interaction.user.name} has won!') # Let everyone know user won
         await bot.db.execute("""
-                INSERT INTO players (user_id, last_played)
-                VALUES ($1, $2)
-                ON CONFLICT (user_id) DO UPDATE SET last_played = $2
-                """, user_id, datetime.date.today())
+                INSERT INTO players (user_id, last_played, username)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (user_id) DO UPDATE SET last_played = $2, wins = players.wins +1, username = $3
+                """, user_id, datetime.date.today(), interaction.user.name)
         return
     
     # Response message with relevent info for user's next guess
@@ -85,8 +85,25 @@ async def giveup(interaction: discord.Interaction):
     todays_country = game.daily_country(countries_list)
     await interaction.response.send_message(f"Country is {todays_country['COUNTRY']}", ephemeral=True)
     await bot.db.execute("""
-            INSERT INTO players (user_id, last_played)
-            VALUES ($1, $2)
+            INSERT INTO players (user_id, last_played, username)
+            VALUES ($1, $2, $3)
             ON CONFLICT (user_id) DO UPDATE SET last_played = $2
-            """, user_id, datetime.date.today()) # prevent user from guessing again
+            """, user_id, datetime.date.today(), interaction.user.name) # prevent user from guessing again
     return
+
+@bot.tree.command(name='leaderboard', description='Display leaderboard', guild=discord.Object(id=int(GUILD_ID)))
+async def leaderboard(interaction: discord.Interaction):
+    rows = await bot.db.fetch("""SELECT username, wins, total_guesses, games_played FROM players
+    ORDER BY wins DESC LIMIT 10
+    """)
+
+    if not rows:
+        await interaction.response.send_message('No winners yet!')
+        return
+    
+    leaderboard_text = '🏆 **Leaderboard** 🏆\n\n'
+    for i, r in enumerate(rows, start=1):
+        avg_guesses = round(r['total_guesses'] /  r['games_played'], 1) if r['games_played'] > 0 else 0
+        leaderboard_text += f"{i}. {r['username']} - {r['wins']} wins | {avg_guesses} average guesses\n"
+
+    await interaction.response.send_message(leaderboard_text)
