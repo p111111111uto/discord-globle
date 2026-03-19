@@ -3,20 +3,26 @@ from discord.ext import commands
 import os
 import datetime
 from dotenv import load_dotenv
+
 load_dotenv()
 GUILD_ID = os.getenv('GUILD_ID')
+
 import game
+
+# Load all countries from CSV once at startup so every command can use it
 countries_list = game.load_countries()
 
+# Enable required gateway intents for reading messages and member info
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
 bot = commands.Bot(command_prefix='/', intents=intents)
-bot.db = None
+bot.db = None  # asyncpg connection pool, assigned in main.py before bot.run()
 
 @bot.event
 async def on_ready():
+    # Sync globally first to clear any stale global commands, then sync to guild for instant availability
     await bot.tree.sync()
     guild = discord.Object(id=GUILD_ID)
     await bot.tree.sync(guild=guild)
@@ -33,6 +39,7 @@ async def guess(interaction: discord.Interaction, usr_country: str):
         await interaction.response.send_message('You\'ve already guessed today!', ephemeral=True)
         return
     
+    # Track every guess attempt, even incorrect ones, for average guess calculation
     await bot.db.execute("""
         INSERT INTO players (user_id, total_guesses, username)
         VALUES ($1, 1, $2)
@@ -103,6 +110,7 @@ async def leaderboard(interaction: discord.Interaction):
     
     leaderboard_text = '🏆 **Leaderboard** 🏆\n\n'
     for i, r in enumerate(rows, start=1):
+        # Avoid division by zero for players who have guesses but no wins yet
         avg_guesses = round(r['total_guesses'] /  r['games_played'], 1) if r['games_played'] > 0 else 0
         leaderboard_text += f"{i}. {r['username']} - {r['wins']} wins | {avg_guesses} average guesses\n"
 

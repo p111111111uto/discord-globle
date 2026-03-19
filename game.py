@@ -1,8 +1,9 @@
 import csv
 import datetime
-datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d")
 import random
 import math
+
+# Uses UTC so the daily country is consistent regardless of where the bot is hosted
 
 # Loads CSV into a list of dictionaries
 def load_countries():
@@ -15,7 +16,8 @@ def load_countries():
 
 # Seeded daily country pick
 def daily_country(countries_list):
-    date_as_seed = int(datetime.date.today().strftime('%Y%m%d'))
+    # Seed with today's date as an integer (e.g. 20260319) so the same country is picked all day
+    date_as_seed = int(datetime.datetime.now(datetime.timezone.utc).date().strftime('%Y%m%d'))
     random.seed(date_as_seed)
     return random.choice(countries_list)
 
@@ -55,13 +57,14 @@ def proximity_percent(distance):
     proximity = max(0, (100 - (distance / MAX_DIST * 100)))
     return int(proximity)
 
-# Arrows pointing to the direction of the country
+# Returns an arrow emoji pointing from the guessed country toward the target
 def directional_arrows(lat1, lon1, lat2, lon2):
+    # Calculate the compass bearing from the guessed country to the target
     dlon = lon2 - lon1
     x = math.sin(math.radians(dlon)) * math.cos(math.radians(lat2))
     y = math.cos(math.radians(lat1)) * math.sin(math.radians(lat2)) - math.sin(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.cos(math.radians(dlon))
     bearing = math.degrees(math.atan2(x, y))
-    bearing = (bearing + 360) % 360
+    bearing = (bearing + 360) % 360  # normalize to 0-360 degrees
 
     if bearing >= 0 and bearing <= 22.5 or bearing > 337.5 and bearing <= 360:
         return '⬆️'
