@@ -4,8 +4,18 @@ import os
 import datetime
 from dotenv import load_dotenv
 
+import logging
+
 load_dotenv()
-GUILD_ID = os.getenv('GUILD_ID')
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    handlers=[
+        logging.FileHandler('discord.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 import game
 
@@ -24,13 +34,12 @@ bot.db = None  # asyncpg connection pool, assigned in main.py before bot.run()
 async def on_ready():
     # Sync globally first to clear any stale global commands, then sync to guild for instant availability
     await bot.tree.sync()
-    guild = discord.Object(id=GUILD_ID)
-    await bot.tree.sync(guild=guild)
     print(f'Bot is ready.')
 
 # Guess command handler
-@bot.tree.command(name='guess', description='Guess today\'s country', guild=discord.Object(id=int(GUILD_ID)))
+@bot.tree.command(name='guess', description='Guess today\'s country')
 async def guess(interaction: discord.Interaction, usr_country: str):
+  try:
     user_id = interaction.user.id
 
     # If user has won, they can't play again
@@ -80,9 +89,13 @@ async def guess(interaction: discord.Interaction, usr_country: str):
     # Response message with relevent info for user's next guess
     await interaction.response.send_message(f'{usr_country} is {distance} miles away {direction}. Proximity: {proximity}%', ephemeral=True)
 
+  except Exception as e:
+    logger.error(f'Error in /guess command: {e}', exc_info=True)
+    await interaction.response.send_message('Something went wrong, please try again.', ephemeral=True)
+
 
 # Giveup command handler
-@bot.tree.command(name='giveup', description='Give up guessing today\'s country', guild=discord.Object(id=int(GUILD_ID)))
+@bot.tree.command(name='giveup', description='Give up guessing today\'s country')
 async def giveup(interaction: discord.Interaction):
     user_id = interaction.user.id
     row = await bot.db.fetchrow('SELECT last_played FROM players WHERE user_id = $1', user_id)
@@ -98,7 +111,7 @@ async def giveup(interaction: discord.Interaction):
             """, user_id, datetime.date.today(), interaction.user.name) # prevent user from guessing again
     return
 
-@bot.tree.command(name='leaderboard', description='Display leaderboard', guild=discord.Object(id=int(GUILD_ID)))
+@bot.tree.command(name='leaderboard', description='Display leaderboard')
 async def leaderboard(interaction: discord.Interaction):
     rows = await bot.db.fetch("""SELECT user_id, wins, total_guesses, games_played FROM players
     ORDER BY wins DESC LIMIT 10
