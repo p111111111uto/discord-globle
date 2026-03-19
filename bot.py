@@ -69,7 +69,7 @@ async def guess(interaction: discord.Interaction, usr_country: str):
     # Win condition
     if distance < 1:
         await interaction.response.send_message(f'Correct! Country was {usr_country}', ephemeral=True)
-        await interaction.followup.send(f'{interaction.user.name} has won!') # Let everyone know user won
+        await interaction.followup.send(f'{interaction.user.mention} has won!') # Let everyone know user won
         await bot.db.execute("""
                 INSERT INTO players (user_id, last_played, username)
                 VALUES ($1, $2, $3)
@@ -100,7 +100,7 @@ async def giveup(interaction: discord.Interaction):
 
 @bot.tree.command(name='leaderboard', description='Display leaderboard', guild=discord.Object(id=int(GUILD_ID)))
 async def leaderboard(interaction: discord.Interaction):
-    rows = await bot.db.fetch("""SELECT username, wins, total_guesses, games_played FROM players
+    rows = await bot.db.fetch("""SELECT user_id, wins, total_guesses, games_played FROM players
     ORDER BY wins DESC LIMIT 10
     """)
 
@@ -112,6 +112,6 @@ async def leaderboard(interaction: discord.Interaction):
     for i, r in enumerate(rows, start=1):
         # Avoid division by zero for players who have guesses but no wins yet
         avg_guesses = round(r['total_guesses'] /  r['games_played'], 1) if r['games_played'] > 0 else 0
-        leaderboard_text += f"{i}. {r['username']} - {r['wins']} wins | {avg_guesses} average guesses\n"
+        leaderboard_text += f"{i}. <@{r['user_id']}> - {r['wins']} wins | {avg_guesses} average guesses\n"
 
     await interaction.response.send_message(leaderboard_text)
