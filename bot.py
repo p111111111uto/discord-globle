@@ -97,34 +97,71 @@ async def guess(interaction: discord.Interaction, usr_country: str):
 # Giveup command handler
 @bot.tree.command(name='giveup', description='Give up guessing today\'s country')
 async def giveup(interaction: discord.Interaction):
-    user_id = interaction.user.id
-    row = await bot.db.fetchrow('SELECT last_played FROM players WHERE user_id = $1', user_id)
-    if row and row['last_played'] == datetime.date.today():
-        await interaction.response.send_message('You\'ve already guessed today!', ephemeral=True)
+    try: 
+        user_id = interaction.user.id
+        row = await bot.db.fetchrow('SELECT last_played FROM players WHERE user_id = $1', user_id)
+        if row and row['last_played'] == datetime.date.today():
+            await interaction.response.send_message('You\'ve already guessed today!', ephemeral=True)
+            return
+        todays_country = game.daily_country(countries_list)
+        await interaction.response.send_message(f"Country is {todays_country['COUNTRY']}", ephemeral=True)
+        await bot.db.execute("""
+                INSERT INTO players (user_id, last_played, username)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (user_id) DO UPDATE SET last_played = $2
+                """, user_id, datetime.date.today(), interaction.user.name) # prevent user from guessing again
         return
-    todays_country = game.daily_country(countries_list)
-    await interaction.response.send_message(f"Country is {todays_country['COUNTRY']}", ephemeral=True)
-    await bot.db.execute("""
-            INSERT INTO players (user_id, last_played, username)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (user_id) DO UPDATE SET last_played = $2
-            """, user_id, datetime.date.today(), interaction.user.name) # prevent user from guessing again
-    return
+    except Exception as e:
+        logger.error(f'Error in /giveup command: {e}', exc_info=True)
+        await interaction.response.send_message('Something went wrong, please try again.', ephemeral=True)
 
 @bot.tree.command(name='leaderboard', description='Display leaderboard')
 async def leaderboard(interaction: discord.Interaction):
-    rows = await bot.db.fetch("""SELECT user_id, wins, total_guesses, games_played FROM players
-    ORDER BY wins DESC LIMIT 10
-    """)
+    try:
+        rows = await bot.db.fetch("""SELECT user_id, wins, total_guesses, games_played FROM players
+        ORDER BY wins DESC LIMIT 10
+        """)
 
-    if not rows:
-        await interaction.response.send_message('No winners yet!')
-        return
-    
-    leaderboard_text = '🏆 **Leaderboard** 🏆\n\n'
-    for i, r in enumerate(rows, start=1):
-        # Avoid division by zero for players who have guesses but no wins yet
-        avg_guesses = round(r['total_guesses'] /  r['games_played'], 1) if r['games_played'] > 0 else 0
-        leaderboard_text += f"{i}. <@{r['user_id']}> - {r['wins']} wins | {avg_guesses} average guesses\n"
+        if not rows:
+            await interaction.response.send_message('No winners yet!')
+            return
+        
+        leaderboard_text = '🏆 **Leaderboard** 🏆\n\n'
+        for i, r in enumerate(rows, start=1):
+            # Avoid division by zero for players who have guesses but no wins yet
+            avg_guesses = round(r['total_guesses'] /  r['games_played'], 1) if r['games_played'] > 0 else 0
+            leaderboard_text += f"{i}. <@{r['user_id']}> - {r['wins']} wins | {avg_guesses} average guesses\n"
 
-    await interaction.response.send_message(leaderboard_text)
+        await interaction.response.send_message(leaderboard_text)
+    except Exception as e:
+        logger.error(f'Error in /leaderboard command: {e}', exc_info=True)
+        await interaction.response.send_message('Something went wrong, please try again.', ephemeral=True)
+
+@bot.tree.command(name='hint', description='Want a hint?')
+async def hint(interaction: discord.Interaction):
+    try:
+        user_id = interaction.user.id
+
+        row = await bot.db.fetchrow("""SELECT user_id, hints_used, last_played FROM players WHERE user_id = $1""", user_id)
+        if row and row['last_played'] != datetime.date.today():
+            await bot.db.execute("""
+                INSERT INTO players (user_id, hints_used)
+                VALUES ($1, 0)
+                ON CONFLICT (user_id) DO UPDATE SET hints_used = 0
+            """, user_id)
+
+        guess = await bot.db.fetchrow('SELECT hints_used FROM players WHERE user_id = $1', user_id)
+        if guess and guess['hints_used'] >= 5:
+            await interaction.response.send_message("You're out of hints today.", ephemeral=True)
+            return
+        else:
+            target = game.daily_country(countries_list)
+            await interaction.response.send_message(game.hint_options(target['COUNTRY']))
+            await bot.db.execute("""
+                INSERT INTO players (user_id, hints_used)
+                VALUES ($1, 1)
+                ON CONFLICT (user_id) DO UPDATE SET hints_used = players.hints_used + 1
+            """, user_id)
+    except Exception as e:
+        logger.error(f'Error in /hint command: {e}', exc_info=True)
+        await interaction.response.send_message('Something went wrong, please try again.', ephemeral=True)
