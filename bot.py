@@ -156,7 +156,7 @@ async def hint(interaction: discord.Interaction):
             return
         else:
             target = game.daily_country(countries_list)
-            await interaction.response.send_message(game.hint_options(target['COUNTRY']))
+            await interaction.response.send_message(game.hint_options(target['COUNTRY']), ephemeral=True)
             await bot.db.execute("""
                 INSERT INTO players (user_id, hints_used)
                 VALUES ($1, 1)
