@@ -92,6 +92,6 @@ def hint_options(country_name):
         f"The neighbors are {', '.join([neighbor.name() for neighbor in country.neighbors()])}",
         f"The languages they speak are {', '.join(country.languages())}"
     ]
-
+    random.seed(None)
     return random.choice(possible_hints)
     
