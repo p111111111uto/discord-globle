@@ -2,6 +2,7 @@ import csv
 import datetime
 import random
 import math
+from countryinfo import CountryInfo
 
 # Uses UTC so the daily country is consistent regardless of where the bot is hosted
 
@@ -82,3 +83,15 @@ def directional_arrows(lat1, lon1, lat2, lon2):
         return '⬅️'
     else:
         return '↖️'
+    
+def hint_options(country_name):
+    country = CountryInfo(country_name)
+    possible_hints = [
+        f'The capital is {country.capital()}',
+        f'The region is {country.region()}',
+        f"The neighbors are {', '.join([neighbor.name() for neighbor in country.neighbors()])}",
+        f"The languages they speak are {', '.join(country.languages())}"
+    ]
+
+    return random.choice(possible_hints)
+    
