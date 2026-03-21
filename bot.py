@@ -151,12 +151,12 @@ async def hint(interaction: discord.Interaction):
             """, user_id)
 
         guess = await bot.db.fetchrow('SELECT hints_used FROM players WHERE user_id = $1', user_id)
-        if guess and guess['hints_used'] >= 5:
+        if guess and guess['hints_used'] >= 4:
             await interaction.response.send_message("You're out of hints today.", ephemeral=True)
             return
         else:
             target = game.daily_country(countries_list)
-            await interaction.response.send_message(game.hint_options(target['COUNTRY']), ephemeral=True)
+            await interaction.response.send_message(game.hint_options(target['COUNTRY'], guess['hints_used']), ephemeral=True)
             await bot.db.execute("""
                 INSERT INTO players (user_id, hints_used)
                 VALUES ($1, 1)

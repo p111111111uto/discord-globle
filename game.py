@@ -84,7 +84,7 @@ def directional_arrows(lat1, lon1, lat2, lon2):
     else:
         return '↖️'
     
-def hint_options(country_name):
+def hint_options(country_name, hints_used):
     country = CountryInfo(country_name)
     possible_hints = [
         f'The capital is {country.capital()}',
@@ -92,6 +92,4 @@ def hint_options(country_name):
         f"The neighbors are {', '.join([neighbor.name() for neighbor in country.neighbors()])}",
         f"The languages they speak are {', '.join(country.languages())}"
     ]
-    random.seed(None)
-    return random.choice(possible_hints)
-    
+    return possible_hints[hints_used]
