@@ -20,9 +20,13 @@ async def create_tables(db):
             total_guesses INT DEFAULT 0, -- Total guesses across all games
             games_played INT DEFAULT 0,  -- Total games (wins + giveups)
             last_played DATE,             -- Prevents playing more than once per day
-            hints_used INT DEFAULT 0     -- Tracks number of hints used
+            hints_used INT DEFAULT 0,     -- Tracks number of hints used
+            hints_reset_date DATE
         );
     """)
     await db.execute("""
         ALTER TABLE players ADD COLUMN IF NOT EXISTS hints_used INT DEFAULT 0;
+    """)
+    await db.execute("""
+        ALTER TABLE players ADD COLUMN IF NOT EXISTS hints_reset_date DATE;
     """)

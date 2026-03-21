@@ -43,8 +43,8 @@ async def guess(interaction: discord.Interaction, usr_country: str):
     user_id = interaction.user.id
 
     # If user has won, they can't play again
-    row = await bot.db.fetchrow('SELECT last_played FROM players WHERE user_id = $1', user_id)
-    if row and row['last_played'] == datetime.date.today():
+    won = await bot.db.fetchrow('SELECT last_played FROM players WHERE user_id = $1', user_id)
+    if won and won['last_played'] == datetime.date.today():
         await interaction.response.send_message('You\'ve already guessed today!', ephemeral=True)
         return
     
@@ -141,22 +141,22 @@ async def leaderboard(interaction: discord.Interaction):
 async def hint(interaction: discord.Interaction):
     try:
         user_id = interaction.user.id
-
-        row = await bot.db.fetchrow("""SELECT user_id, hints_used, last_played FROM players WHERE user_id = $1""", user_id)
-        if row and row['last_played'] != datetime.date.today():
+        hint = await bot.db.fetchrow("""SELECT user_id, hints_reset_date, last_played FROM players WHERE user_id = $1""", user_id)
+        if hint and hint['hints_reset_date'] != datetime.date.today():
             await bot.db.execute("""
-                INSERT INTO players (user_id, hints_used)
-                VALUES ($1, 0)
-                ON CONFLICT (user_id) DO UPDATE SET hints_used = 0
-            """, user_id)
+                INSERT INTO players (user_id, hints_reset_date)
+                VALUES ($1, $2)
+                ON CONFLICT (user_id) DO UPDATE SET hints_used = 0, hints_reset_date = $2
+            """, user_id, datetime.date.today())
 
         guess = await bot.db.fetchrow('SELECT hints_used FROM players WHERE user_id = $1', user_id)
         if guess and guess['hints_used'] >= 4:
             await interaction.response.send_message("You're out of hints today.", ephemeral=True)
             return
         else:
+            hints_used = guess['hints_used'] if guess else 0
             target = game.daily_country(countries_list)
-            await interaction.response.send_message(game.hint_options(target['COUNTRY'], guess['hints_used']), ephemeral=True)
+            await interaction.response.send_message(game.hint_options(target['COUNTRY'], hints_used), ephemeral=True)
             await bot.db.execute("""
                 INSERT INTO players (user_id, hints_used)
                 VALUES ($1, 1)
