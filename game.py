@@ -90,6 +90,6 @@ def hint_options(country_name, hints_used):
         f'The capital is {country.capital()}',
         f'The region is {country.region()}',
         f"The neighboring countries are {', '.join([neighbor.name() for neighbor in country.neighbors()])}" if country.neighbors() else "No neighboring countries",
-        f"The languages they speak are {', '.join(country.languages()).capitalize()}"
+        f"The languages they speak are {', '.join(country.languages()).upper()}"
     ]
     return possible_hints[hints_used]
