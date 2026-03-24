@@ -15,6 +15,7 @@ The daily country resets at midnight UTC and is the same for everyone in the ser
 | `/guess [country]` | Guess today's country |
 | `/giveup` | Reveal today's country and end your game |
 | `/leaderboard` | Show the top 10 players by wins |
+| `/hint` | Get a hint about today's country (max 4 per day) |
 
 ## Features
 
@@ -23,12 +24,14 @@ The daily country resets at midnight UTC and is the same for everyone in the ser
 - 🧭 **Directional arrows** — know which direction to look next
 - 📊 **Proximity score** — 0–100% rating based on how close you are
 - 🏆 **Persistent leaderboard** — tracks wins and average guesses across all players
+- 💡 **Daily hints** — up to 4 hints per day revealing capital, region, neighbors, and languages
 - 🔒 **One game per day** — resets automatically at midnight UTC, no cheating
 
 ## Tech Stack
 
 - **[discord.py](https://discordpy.readthedocs.io/)** — Discord bot framework
 - **[asyncpg](https://magicstack.github.io/asyncpg/)** — async PostgreSQL driver
+- **[countryinfo](https://pypi.org/project/countryinfo/)** — country data for hints (capital, region, neighbors, languages)
 - **[PostgreSQL](https://www.postgresql.org/)** — persistent player stats and leaderboard
 - **[Railway](https://railway.app/)** — hosting and managed Postgres database
 
@@ -40,7 +43,6 @@ The daily country resets at midnight UTC and is the same for everyone in the ser
 4. Create a `.env` file with the following:
 ```env
 DISCORD_TOKEN=your_token
-GUILD_ID=your_guild_id
 DATABASE_URL=your_postgres_url
 ```
 
