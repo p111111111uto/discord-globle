@@ -80,9 +80,9 @@ async def guess(interaction: discord.Interaction, usr_country: str):
         await interaction.response.send_message(f'Correct! Country was {usr_country}', ephemeral=True)
         await interaction.followup.send(f'{interaction.user.mention} has won!') # Let everyone know user won
         await bot.db.execute("""
-                INSERT INTO players (user_id, last_played, username)
-                VALUES ($1, $2, $3)
-                ON CONFLICT (user_id) DO UPDATE SET last_played = $2, wins = players.wins +1, username = $3
+                INSERT INTO players (user_id, last_played, games_played, username)
+                VALUES ($1, $2, 1, $3)
+                ON CONFLICT (user_id) DO UPDATE SET last_played = $2, wins = players.wins +1, games_played = players.games_played + 1, username = $3
                 """, user_id, datetime.date.today(), interaction.user.name)
         return
     
@@ -106,9 +106,9 @@ async def giveup(interaction: discord.Interaction):
         todays_country = game.daily_country(countries_list)
         await interaction.response.send_message(f"Country is {todays_country['COUNTRY']}", ephemeral=True)
         await bot.db.execute("""
-                INSERT INTO players (user_id, last_played, username)
-                VALUES ($1, $2, $3)
-                ON CONFLICT (user_id) DO UPDATE SET last_played = $2
+                INSERT INTO players (user_id, last_played, games_played, username)
+                VALUES ($1, $2, 1, $3)
+                ON CONFLICT (user_id) DO UPDATE SET last_played = $2, games_played = players.games_played + 1
                 """, user_id, datetime.date.today(), interaction.user.name) # prevent user from guessing again
         return
     except Exception as e:
