@@ -87,7 +87,7 @@ async def guess(interaction: discord.Interaction, usr_country: str):
         return
     
     # Response message with relevent info for user's next guess
-    await interaction.response.send_message(f'{usr_country} is {distance} miles away {int(direction)}. Proximity: {proximity}%', ephemeral=True)
+    await interaction.response.send_message(f'{usr_country} is {int(distance)} miles away {direction}. Proximity: {proximity}%', ephemeral=True)
 
   except Exception as e:
     logger.error(f'Error in /guess command: {e}', exc_info=True)
