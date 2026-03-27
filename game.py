@@ -84,14 +84,142 @@ def directional_arrows(lat1, lon1, lat2, lon2):
     else:
         return '↖️'
     
+# Manual hint data for countries not recognized by countryinfo
+MANUAL_HINTS = {
+    "South Georgia and South Sandwich Islands": {
+        "capital": "King Edward Point",
+        "region": "South America",
+        "neighbors": "No neighboring countries",
+        "languages": "English"
+    },
+    "Bonaire": {
+        "capital": "Kralendijk",
+        "region": "Caribbean",
+        "neighbors": "No neighboring countries",
+        "languages": "Dutch, Papiamentu"
+    },
+    "Curacao": {
+        "capital": "Willemstad",
+        "region": "Caribbean",
+        "neighbors": "No neighboring countries",
+        "languages": "Dutch, Papiamentu, English"
+    },
+    "Saba": {
+        "capital": "The Bottom",
+        "region": "Caribbean",
+        "neighbors": "No neighboring countries",
+        "languages": "Dutch, English"
+    },
+    "Saint Barthelemy": {
+        "capital": "Gustavia",
+        "region": "Caribbean",
+        "neighbors": "No neighboring countries",
+        "languages": "French"
+    },
+    "Saint Eustatius": {
+        "capital": "Oranjestad",
+        "region": "Caribbean",
+        "neighbors": "No neighboring countries",
+        "languages": "Dutch, English"
+    },
+    "Saint Martin": {
+        "capital": "Marigot",
+        "region": "Caribbean",
+        "neighbors": "Sint Maarten",
+        "languages": "French"
+    },
+    "Sint Maarten": {
+        "capital": "Philipsburg",
+        "region": "Caribbean",
+        "neighbors": "Saint Martin",
+        "languages": "Dutch, English"
+    },
+    "US Virgin Islands": {
+        "capital": "Charlotte Amalie",
+        "region": "Caribbean",
+        "neighbors": "No neighboring countries",
+        "languages": "English"
+    },
+    "Svalbard": {
+        "capital": "Longyearbyen",
+        "region": "Europe",
+        "neighbors": "No neighboring countries",
+        "languages": "Norwegian"
+    },
+    "Congo DRC": {
+        "capital": "Kinshasa",
+        "region": "Africa",
+        "neighbors": "Republic of the Congo, Angola, Zambia, Tanzania, Burundi, Rwanda, Uganda, South Sudan, Central African Republic",
+        "languages": "French, Lingala, Swahili, Tshiluba, Kongo"
+    },
+    "Juan De Nova Island": {
+        "capital": "No official capital",
+        "region": "Africa",
+        "neighbors": "No neighboring countries",
+        "languages": "French"
+    },
+    "Glorioso Islands": {
+        "capital": "No official capital",
+        "region": "Africa",
+        "neighbors": "No neighboring countries",
+        "languages": "French"
+    },
+    "Palestinian Territory": {
+        "capital": "Ramallah",
+        "region": "Asia",
+        "neighbors": "Israel, Jordan, Egypt",
+        "languages": "Arabic"
+    },
+    "Vatican City": {
+        "capital": "Vatican City",
+        "region": "Europe",
+        "neighbors": "Italy",
+        "languages": "Italian, Latin"
+    },
+    "Cocos Islands": {
+        "capital": "West Island",
+        "region": "Asia",
+        "neighbors": "No neighboring countries",
+        "languages": "English, Malay"
+    },
+    "Canarias": {
+        "capital": "Las Palmas de Gran Canaria, Santa Cruz de Tenerife",
+        "region": "Africa",
+        "neighbors": "No neighboring countries",
+        "languages": "Spanish"
+    },
+    "Kosovo": {
+        "capital": "Pristina",
+        "region": "Europe",
+        "neighbors": "Serbia, North Macedonia, Albania, Montenegro",
+        "languages": "Albanian, Serbian"
+    },
+    "Aland Islands": {
+        "capital": "Mariehamn",
+        "region": "Europe",
+        "neighbors": "No neighboring countries",
+        "languages": "Swedish"
+    },
+}
+
 # Returns a hint string for the target country based on how many hints have been used
 # Hints are ordered: capital → region → neighbors → languages
+# Falls back to MANUAL_HINTS for countries not recognized by countryinfo
 def hint_options(country_name, hints_used):
-    country = CountryInfo(country_name)
-    possible_hints = [
-        f'The capital is {country.capital()}',
-        f'The region is {country.region()}',
-        f"The neighboring countries are {', '.join([neighbor.name() for neighbor in country.neighbors()])}" if country.neighbors() else "No neighboring countries",
-        f"The languages they speak are {', '.join(country.languages()).upper()}"
-    ]
+    if country_name in MANUAL_HINTS:
+        data = MANUAL_HINTS[country_name]
+        possible_hints = [
+            f"The capital is {data['capital']}",
+            f"The region is {data['region']}",
+            f"The neighboring countries are {data['neighbors']}",
+            f"The languages they speak are {data['languages'].upper()}"
+        ]
+    else:
+        country = CountryInfo(country_name)
+        possible_hints = [
+            f'The capital is {country.capital()}',
+            f'The region is {country.region()}',
+            f"The neighboring countries are {', '.join([neighbor.name() for neighbor in country.neighbors()])}" if country.neighbors() else "No neighboring countries",
+            f"The languages they speak are {', '.join(country.languages()).upper()}"
+        ]
     return possible_hints[hints_used]
