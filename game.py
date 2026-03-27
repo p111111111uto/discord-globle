@@ -3,6 +3,7 @@ import datetime
 import random
 import math
 from countryinfo import CountryInfo
+import pycountry
 
 # Uses UTC so the daily country is consistent regardless of where the bot is hosted
 
@@ -220,6 +221,6 @@ def hint_options(country_name, hints_used):
             f'The capital is {country.capital()}',
             f'The region is {country.region()}',
             f"The neighboring countries are {', '.join([neighbor.name() for neighbor in country.neighbors()])}" if country.neighbors() else "No neighboring countries",
-            f"The languages they speak are {', '.join(country.languages()).upper()}"
+            f"The languages they speak are {', '.join([(pycountry.languages.get(alpha_2=code) or pycountry.languages.get(alpha_3=code) or type('', (), {'name': code})()).name for code in country.languages()]).upper()}"
         ]
     return possible_hints[hints_used]
