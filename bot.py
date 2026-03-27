@@ -48,11 +48,20 @@ async def guess(interaction: discord.Interaction, usr_country: str):
         await interaction.response.send_message('You\'ve already guessed today!', ephemeral=True)
         return
     
+    # Reset daily guess count if the player's last reset wasn't today
+    daily_guess = await bot.db.fetchrow('SELECT daily_guesses_reset_date FROM players WHERE user_id = $1', user_id)
+    if daily_guess and daily_guess['daily_guesses_reset_date'] != datetime.date.today():
+        await bot.db.execute("""
+                INSERT INTO players (user_id, daily_guesses, daily_guesses_reset_date)
+                VALUES ($1, 0, $2)
+                ON CONFLICT (user_id) DO UPDATE SET daily_guesses = 0, daily_guesses_reset_date = $2
+            """, user_id, datetime.date.today())
+    
     # Track every guess attempt, even incorrect ones, for average guess calculation
     await bot.db.execute("""
-        INSERT INTO players (user_id, total_guesses, username)
+        INSERT INTO players (user_id, daily_guesses, username)
         VALUES ($1, 1, $2)
-        ON CONFLICT (user_id) DO UPDATE SET total_guesses = players.total_guesses + 1, username = $2
+        ON CONFLICT (user_id) DO UPDATE SET daily_guesses = players.daily_guesses + 1, username = $2
     """, user_id, interaction.user.name)
 
     # User's guess
@@ -118,7 +127,7 @@ async def giveup(interaction: discord.Interaction):
 @bot.tree.command(name='leaderboard', description='Display leaderboard')
 async def leaderboard(interaction: discord.Interaction):
     try:
-        rows = await bot.db.fetch("""SELECT user_id, wins, total_guesses, games_played FROM players
+        rows = await bot.db.fetch("""SELECT user_id, wins, daily_guesses, games_played FROM players
         ORDER BY wins DESC LIMIT 10
         """)
 
@@ -129,18 +138,20 @@ async def leaderboard(interaction: discord.Interaction):
         leaderboard_text = '🏆 **Leaderboard** 🏆\n\n'
         for i, r in enumerate(rows, start=1):
             # Avoid division by zero for players who have guesses but no wins yet
-            avg_guesses = round(r['total_guesses'] //  r['games_played'], 1) if r['games_played'] > 0 else 0
-            leaderboard_text += f"{i}. <@{r['user_id']}> - {r['wins']} wins | {avg_guesses} average guesses\n"
+            leaderboard_text += f"{i}. <@{r['user_id']}> - {r['wins']} wins | {r['daily_guesses']} average guesses\n"
 
         await interaction.response.send_message(leaderboard_text)
     except Exception as e:
         logger.error(f'Error in /leaderboard command: {e}', exc_info=True)
         await interaction.response.send_message('Something went wrong, please try again.', ephemeral=True)
 
+# Hint command handler
 @bot.tree.command(name='hint', description='Want a hint?')
 async def hint(interaction: discord.Interaction):
     try:
         user_id = interaction.user.id
+
+        # Reset hints if the player hasn't used hints today yet
         hint = await bot.db.fetchrow("""SELECT user_id, hints_reset_date, last_played FROM players WHERE user_id = $1""", user_id)
         if hint and hint['hints_reset_date'] != datetime.date.today():
             await bot.db.execute("""
@@ -149,14 +160,17 @@ async def hint(interaction: discord.Interaction):
                 ON CONFLICT (user_id) DO UPDATE SET hints_used = 0, hints_reset_date = $2
             """, user_id, datetime.date.today())
 
+        # Check if player has used all 4 hints for today
         guess = await bot.db.fetchrow('SELECT hints_used FROM players WHERE user_id = $1', user_id)
         if guess and guess['hints_used'] >= 4:
             await interaction.response.send_message("You're out of hints today.", ephemeral=True)
             return
         else:
+            # Default to 0 hints used for new players with no row yet
             hints_used = guess['hints_used'] if guess else 0
             target = game.daily_country(countries_list)
             await interaction.response.send_message(game.hint_options(target['COUNTRY'], hints_used), ephemeral=True)
+            # Increment hints used after sending the hint
             await bot.db.execute("""
                 INSERT INTO players (user_id, hints_used)
                 VALUES ($1, 1)

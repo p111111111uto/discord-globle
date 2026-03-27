@@ -84,6 +84,8 @@ def directional_arrows(lat1, lon1, lat2, lon2):
     else:
         return '↖️'
     
+# Returns a hint string for the target country based on how many hints have been used
+# Hints are ordered: capital → region → neighbors → languages
 def hint_options(country_name, hints_used):
     country = CountryInfo(country_name)
     possible_hints = [

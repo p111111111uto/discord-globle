@@ -17,7 +17,8 @@ async def create_tables(db):
             user_id BIGINT PRIMARY KEY,  -- Discord user ID
             username TEXT,               -- Display name, updated on each interaction
             wins INT DEFAULT 0,          -- Total number of correct guesses
-            total_guesses INT DEFAULT 0, -- Total guesses across all games
+            daily_guesses INT DEFAULT 0, -- Total guesses for today's game
+            daily_guesses_reset_date DATE,
             games_played INT DEFAULT 0,  -- Total games (wins + giveups)
             last_played DATE,             -- Prevents playing more than once per day
             hints_used INT DEFAULT 0,     -- Tracks number of hints used
@@ -29,4 +30,10 @@ async def create_tables(db):
     """)
     await db.execute("""
         ALTER TABLE players ADD COLUMN IF NOT EXISTS hints_reset_date DATE;
+    """)
+    await db.execute("""
+        ALTER TABLE players ADD COLUMN IF NOT EXISTS daily_guesses INT DEFAULT 0;
+    """)
+    await db.execute("""
+        ALTER TABLE players ADD COLUMN IF NOT EXISTS daily_guesses_reset_date DATE;
     """)
